@@ -1,60 +1,62 @@
-import os, socket, subprocess, time, getpass, json
+import os, sys, getpass, json, socket, time
 from urllib.request import urlopen
 
-# --- PROTOCOLO DE PRIVACIDAD STARK ---
-# La contraseña NO se sube a GitHub. Se guarda localmente.
-PIN_PATH = os.path.expanduser("~/.stark_key")
+# --- CONFIGURACIÓN OMEGA SEALED ---
+# Tu PIN Maestro Exclusivo
+MASTER_PIN = "9999" 
 
-def get_stored_pin():
-    if not os.path.exists(PIN_PATH):
-        # Si no existe, creamos el de fábrica (CÁMBIALO AL ENTRAR)
-        with open(PIN_PATH, "w") as f: f.write("1234")
-        return "1234"
-    return open(PIN_PATH, "r").read().strip()
-
-C, W, G, R, N = '\033[1;36m', '\033[1;37m', '\033[0;37m', '\033[1;31m', '\033[0m'
+# Paleta de Colores OMEGA (Rojo, Blanco, Gris)
+R, W, G, C, N = '\033[1;31m', '\033[1;37m', '\033[0;37m', '\033[1;36m', '\033[0m'
 
 LOGO = f"""
-{C}  ______  _____   _____  _______  _     _ 
- {C} |  ____||     \  |   | |__   __| | |   | |
- {C} | |____ |  --  | |   |    | |    | |___| |
- {C} |______||_____/  |___|    |_|    |_____|_|
-{W}           M  A  R  K    5  3    S  Y  S  T  E  M{N}
+{R}          ◢◤ Ω ◢◤
+{R}      ______  __  __  ______  _____   _____ 
+{R}     |     ||  \/  ||  ____||     \ |     |
+{R}     |  |  || \  / ||  ____ |  --  ||  -  |
+{R}     |_____||_|\/|_||______||_____/ |_____|
+{W}               O  M  E  G  A    S  Y  S  T  E  M{N}
 """
 
-def locate_me():
+def get_sys_info():
     try:
-        data = json.loads(urlopen("http://ip-api.com/json/").read().decode())
-        return f"\n{C}--- UBICACIÓN ---{N}\n{G}IP: {W}{data['query']}\n{G}CIUDAD: {W}{data['city']}\n{C}-----------------{N}"
-    except: return f" {R}● Error Satelital.{N}"
+        mem = os.popen("free -m").read().split('\n')[1].split()
+        total, used = mem[1], mem[2]
+        return f"\n{R}--- ESTADO OMEGA ---{N}\n{G}MEMORIA TOTAL: {W}{total}MB\n{G}EN USO: {R}{used}MB\n{R}---------------------{N}"
+    except: return f" {R}● Sensores offline.{N}"
 
 def chat(u):
     u = u.lower().strip()
-    if u == "where": return locate_me()
-    if u.startswith("set pin "):
-        new_pin = u[8:].strip()
-        with open(PIN_PATH, "w") as f: f.write(new_pin)
-        return f"{C}● PIN ACTUALIZADO LOCALMENTE.{N}"
-    if u == "status": return f"{C}● MARK 53 | REPO PÚBLICO BLINDADO{N}"
-    return f"{G}Comandos: where, set pin <nuevo>, status, exit{N}"
+    if u == "status": return get_sys_info()
+    if u == "where":
+        try:
+            d = json.loads(urlopen("http://ip-api.com/json/").read().decode())
+            return f"\n{R}--- UBICACIÓN SELLADA ---{N}\n{G}CIUDAD: {W}{d['city']}\n{G}IP PÚBLICA: {R}{d['query']}{N}"
+        except: return f" {R}● Fallo GPS.{N}"
+    if u.startswith("note "):
+        with open(os.path.expanduser("~/.stark_vault"), "a") as f: f.write(f"- [{time.strftime('%H:%M:%S')] {u[5:]}\n")
+        return f"{R}● Nota registrada en el búnker OMEGA.{N}"
+    if u == "view":
+        try: return f"\n{W}{open(os.path.expanduser('~/.stark_vault'), 'r').read()}{N}"
+        except: return f" {R}○ Búnker OMEGA vacío.{N}"
+    if u in ["info", "help"]: return f"{G}Comandos: status, where, note, view, exit{N}"
+    return f"{R}○ Comando no reconocido.{N}"
 
 if __name__ == "__main__":
     os.system('clear')
-    current_pin = get_stored_pin()
-    print(f"\n {R}◢◤ ACCESO PRIVADO ◢◤{N}")
-    if getpass.getpass(" PIN: ") == current_pin:
+    print(f"\n {R}◢◤ INGRESE CREDENCIALES OMEGA ◢◤{N}")
+    entry = getpass.getpass(" PIN DE ACCESO: ").strip()
+    
+    if entry == MASTER_PIN:
         os.system('clear')
         print(LOGO)
-        print(f" {C}●{N} {W}MODO: SEGURIDAD DE REPOSITORIO ACTIVA{N}\n")
+        print(f" {R}●{N} {W}PROTOCOLO OMEGA v53.2 {G}SELLADO{N}")
+        print(f" {R}●{N} {G}SISTEMA EXCLUSIVO PARA ETERNALFURIA.{N}\n")
         while True:
             try:
-                p = input(f"{C}stark{N} {G}>>{N} ")
-                if p == 'exit': break
-                print(chat(p))
-            except EOFError: break
-        try:
-                p = input(f"{C}stark{N} {G}>>{N} ")
+                p = input(f"{R}omega{N} {G}>>{N} ")
                 if p in ['exit', 'salir']: break
                 res = chat(p)
-                if res: print(f"{res}\n")
+                if res: print(res)
             except EOFError: break
+    else:
+        print(f"\n {R}!!! ACCESO DENEGADO - PROTOCOLO DE SILENCIO ACTIVADO !!!{N}")
