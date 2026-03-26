@@ -1,7 +1,17 @@
-import os, socket, subprocess, time, getpass
+import os, socket, subprocess, time, getpass, json
+from urllib.request import urlopen
 
-# --- CONFIGURACIÓN VISUAL STARK ---
-PASSWORD = "1234"
+# --- PROTOCOLO DE PRIVACIDAD STARK ---
+# La contraseña NO se sube a GitHub. Se guarda localmente.
+PIN_PATH = os.path.expanduser("~/.stark_key")
+
+def get_stored_pin():
+    if not os.path.exists(PIN_PATH):
+        # Si no existe, creamos el de fábrica (CÁMBIALO AL ENTRAR)
+        with open(PIN_PATH, "w") as f: f.write("1234")
+        return "1234"
+    return open(PIN_PATH, "r").read().strip()
+
 C, W, G, R, N = '\033[1;36m', '\033[1;37m', '\033[0;37m', '\033[1;31m', '\033[0m'
 
 LOGO = f"""
@@ -9,49 +19,40 @@ LOGO = f"""
  {C} |  ____||     \  |   | |__   __| | |   | |
  {C} | |____ |  --  | |   |    | |    | |___| |
  {C} |______||_____/  |___|    |_|    |_____|_|
-{W}           S  T  A  R  K    S  Y  S  T  E  M{N}
+{W}           M  A  R  K    5  3    S  Y  S  T  E  M{N}
 """
 
-def tactical_scan():
-    print(f" {C}» Escaneando frecuencia local...{N}")
-    res = os.popen("arp -a").read()
-    if not res: return f" {R}● Error: Sensores bloqueados.{N}"
-    output = f"\n{C}--- UNIDADES DETECTADAS ---{N}\n"
-    for line in res.split('\n'):
-        if "(" in line:
-            output += f"{G}  [+] {W}{line}{N}\n"
-    return output + f"{C}---------------------------{N}"
+def locate_me():
+    try:
+        data = json.loads(urlopen("http://ip-api.com/json/").read().decode())
+        return f"\n{C}--- UBICACIÓN ---{N}\n{G}IP: {W}{data['query']}\n{G}CIUDAD: {W}{data['city']}\n{C}-----------------{N}"
+    except: return f" {R}● Error Satelital.{N}"
 
 def chat(u):
     u = u.lower().strip()
-    if u == "scan": return tactical_scan()
-    if u.startswith("note "):
-        with open(os.path.expanduser("~/.stark_vault"), "a") as f: f.write(f"- {u[5:]}\n")
-        return f"{C}● Nota encriptada en el búnker.{N}"
-    if u == "view":
-        try: 
-            with open(os.path.expanduser("~/.stark_vault"), "r") as f: return f"\n{W}{f.read()}{N}"
-        except: return f" {R}○ Búnker vacío.{N}"
-    if u in ["status", "info"]: return f"{C}● MARK 51.2 | NÚCLEO ESTABLE{N}"
-    return f"{G}Comandos: scan, note, view, status, exit{N}"
+    if u == "where": return locate_me()
+    if u.startswith("set pin "):
+        new_pin = u[8:].strip()
+        with open(PIN_PATH, "w") as f: f.write(new_pin)
+        return f"{C}● PIN ACTUALIZADO LOCALMENTE.{N}"
+    if u == "status": return f"{C}● MARK 53 | REPO PÚBLICO BLINDADO{N}"
+    return f"{G}Comandos: where, set pin <nuevo>, status, exit{N}"
 
 if __name__ == "__main__":
     os.system('clear')
-    print(f"\n {R}◢◤ ACCESO RESTRINGIDO ◢◤{N}")
-    if getpass.getpass(" PIN DE SEGURIDAD: ") == PASSWORD:
+    current_pin = get_stored_pin()
+    print(f"\n {R}◢◤ ACCESO PRIVADO ◢◤{N}")
+    if getpass.getpass(" PIN: ") == current_pin:
         os.system('clear')
         print(LOGO)
-        print(f" {C}●{N} {W}SISTEMA OPERATIVO v51.2{N}")
-        print(f" {C}●{N} {G}BIENVENIDO, ETERNALFURIA.{N}\n")
+        print(f" {C}●{N} {W}MODO: SEGURIDAD DE REPOSITORIO ACTIVA{N}\n")
         while True:
             try:
                 p = input(f"{C}stark{N} {G}>>{N} ")
-                if p in ['exit', 'salir']: break
-                res = chat(p)
-                if res: print(f"{res}\n")
+                if p == 'exit': break
+                print(chat(p))
             except EOFError: break
-:
-            try:
+        try:
                 p = input(f"{C}stark{N} {G}>>{N} ")
                 if p in ['exit', 'salir']: break
                 res = chat(p)
